@@ -1,0 +1,23 @@
+{
+  "nets": {
+    "Server_1_net": {"type": "network", "subtype": "wifi1" },
+    "Server_2_net": {"type": "network", "subtype": "wifi1" },
+    "Server_3_net": {"type": "network", "subtype": "wifi2" },
+    "Server_4_net": {"type": "network", "subtype": "wifi2" }
+  },
+
+  "gpus": {
+    "jetson_1": {"id": "jetson_1","type": "gpu", "subtype": "l-gpu", "ip":"172.22.232.196" },
+    "jetson_2": {"id": "jetson_2","type": "gpu", "subtype": "s-gpu", "ip":"172.22.232.197" },
+    "jetson_3": {"id": "jetson_3","type": "gpu", "subtype": "l-gpu", "ip":"172.22.232.211" },
+    "jetson_4": {"id": "jetson_4","type": "gpu", "subtype": "s-gpu", "ip":"172.22.232.212" }
+  },
+
+  "comps": {
+     "svr1_0": ["Server_1_net", "jetson_1"],
+     "svr2_0": ["Server_2_net", "jetson_2"],
+     "svr3_0": ["Server_3_net", "jetson_3"],
+     "svr4_0": ["Server_4_net", "jetson_4"]
+
+  }
+}

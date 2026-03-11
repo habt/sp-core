@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>LED Dashboard</title>
+
+  <style>
+   
+    body {
+      margin: 0;
+      display: flex;
+      height: 100vh;
+      font-family: Arial;
+      background: #111;
+      color: white;
+    }
+
+
+    .container {
+      display: grid;
+      grid-template-rows: 100px 1fr;
+      height: 100vh;
+      width: 100vw;   /* Force full viewport width */
+    }
+
+    .header {
+      background-color: #2c3e50;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+    }
+
+    .content {
+      display: grid;
+      grid-template-columns: 1fr 1fr; /* 25% / 50% / 25% */
+      width: 100%;
+    }
+
+    /* LEFT 1/4 of screen for LEDs */
+    .led-panel {
+      background: #1a1a1a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start; /* aligns with top of content */
+      padding-top: 40px;           /* match main content padding */
+      gap: 30px;
+      border-right: 2px solid #333;
+    }
+
+    /* 25% Control Panel */
+    .control-panel {
+      background: #1a1a1a;
+      padding: 20px;
+      align-items: center;
+      border-left: 2px solid #333;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+
+    /* Remaining 1/2 area */
+    .charts {
+      padding: 40px;
+      align-items: center;
+      display: flex;
+      flex-direction: column;
+    }
+
+
+    .led {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: gray;
+      transition: all 0.3s ease;
+    }
+
+    .led-row {
+      display: flex;
+      align-items: center;     /* vertical centering */
+      justify-content: center; /* horizontal centering */
+      gap: 15px;
+      width: 100%;
+    }
+
+   .led-label {
+     font-size: 16px;
+   }
+
+    .red    { background: red;    box-shadow: 0 0 25px red; }
+    .green  { background: lime;   box-shadow: 0 0 25px lime; }
+    .yellow { background: yellow; box-shadow: 0 0 25px yellow; }
+    .blue   { background: cyan;   box-shadow: 0 0 25px cyan; }
+    .off    { background: #333;   box-shadow: none; }
+
+    input[type="number"] {
+      padding: 5px;
+      font-size: 14px;
+    }
+
+    button {
+      padding: 10px;
+      background: #444;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #666;
+    }
+
+    h2 {
+      margin-bottom: 30px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+        Service Planner
+    </div>
+
+    <div class="content">
+      <div class="led-panel">
+        <h2>Servers </h2>
+
+        <div class="led-row">
+          <div id="led1" class="led"></div>
+          <span class="led-label">S1</span>
+        </div>
+
+        <div class="led-row">
+          <div id="led2" class="led"></div>
+          <span class="led-label">S2</span>
+        </div>
+
+        <div class="led-row">
+          <div id="led3" class="led"></div>
+          <span class="led-label">S3</span>
+        </div>
+
+        <div class="led-row">
+          <div id="led4" class="led"></div>
+          <span class="led-label">S4</span>
+        </div>
+
+      </div>
+
+      <!-- Control Panel -->
+      <div class="control-panel">
+        <h2>SP Controls</h2>
+
+        <label>Core Update Interval (secs):</label>
+        <input type="number" id="value1">
+
+        <!--
+        <label>History Window (secs):</label>
+        <input type="number" id="value2">
+        -->
+
+        <label>Sigma Threshold (0-6):</label>
+        <input type="number" id="value3">
+
+        <label>EWMA Coeficient (0-1):</label>
+        <input type="number" id="value4">
+
+        <label>Refresh Interval (ms):</label>
+        <input type="number" id="value5">
+
+        <button onclick="sendControl()">Set</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+async function fetchStatus() {
+  const res = await fetch("/led/status");
+  const data = await res.json();
+
+
+  console.log(data);
+
+  Object.keys(data).forEach(id => {
+    const led = document.getElementById(id);
+    led.className = "led " + data[id];
+  });
+}
+
+// store the interval id (not the milliseconds value)
+let refreshIntervalId = null;
+const DEFAULT_INTERVAL_MS = 10000;
+
+// start the periodic fetch immediately
+refreshIntervalId = setInterval(fetchStatus, DEFAULT_INTERVAL_MS);
+fetchStatus();
+
+function getNumberOrNull(id) {
+  const value = document.getElementById(id).value;
+  return value === "" ? null : parseFloat(value);
+}
+
+async function sendControl() {
+  const payload = {
+    update: getNumberOrNull("value1"),
+    //hysteresis: getNumberOrNull("value2"),
+    sigma: getNumberOrNull("value3"),
+    ewma: getNumberOrNull("value4")
+  };
+
+  console.log(payload);
+
+  // stop previous interval
+  if (refreshIntervalId !== null) {
+    clearInterval(refreshIntervalId);
+    refreshIntervalId = null;
+  }
+
+  // Update refresh interval
+  const seconds = getNumberOrNull("value5") ?? 1;
+  const intervalMs = Math.max(seconds * 1000, 1000); // minimum 1s
+
+  // start new interval and keep its id
+  refreshIntervalId = setInterval(fetchStatus, intervalMs);
+  console.log("Refresh interval (ms):", intervalMs);
+
+  await fetch("/control", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  console.log(await response.text());
+
+  alert("Control data sent!");
+}
+
+setInterval(fetchStatus, refreshInterval);
+fetchStatus();
+</script>
+
+</body>
+</html>

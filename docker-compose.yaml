@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  core:
+    image: habhub/sp_core:v1
+    build: .
+    ports:
+      - "6400:6400"
+    env_file:
+      - config.env
+    environment:
+      - APP_ENV=${APP_ENV}
+    
