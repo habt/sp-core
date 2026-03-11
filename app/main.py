@@ -88,3 +88,7 @@ def update_control(data: ControlData):
     sp_core.set_parameters(control_state)
 
     return {"success": True, "received": control_state}
+
+@app.post("/toggle")
+def toggle_core(toggle: ToggleData):
+    sp_core.set_status(toggle.command)

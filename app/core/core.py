@@ -12,7 +12,8 @@ from app.library.settings import (
     NET_KEY, SERVERS_KEY, COMPS_KEY,
     NET_PRED_ID_KEY, NET_PRED_KEY, NET_PRED_VAR_KEY,
     GPU_PRED_ID_KEY, GPU_PRED_KEY, GPU_PRED_VAR_KEY,
-    DEFAULT_EWMA_ALPHA, DEFAULT_HISTORY_LENGTH
+    DEFAULT_EWMA_ALPHA, DEFAULT_HISTORY_LENGTH,
+    DEFAULT_SERVER_ID
 )
 
 PATH_FILE = os.getcwd() + os.getenv("PATH_FILE")
@@ -30,16 +31,19 @@ class ServicePlannerCore():
     
     def __init__(self, comm: ServicePlannerComm, data_file: str=None):
         self.stop_event = asyncio.Event()
+        self.enabled = True
         self.comm = comm
         self.periodic_update_task = None
+        
         self.best_server = None
-        self.candidate_server = None
-        self.hysterisis_counter = 0
+        self.candidate_server = None  # used by the hyterisis counter method of selection
+        
 
         self.refresh_interval = CORE_REFRESH_INTERVAL
         self.hysterisis_threshold = HYSTERISIS_THRESHOLD
         self.sigma_level = SIGMA_LEVEL
         self.ewma_alpha = DEFAULT_EWMA_ALPHA
+        self.hysterisis_counter = 0
 
         self.delay_history = deque(maxlen=DEFAULT_HISTORY_LENGTH)
         self.selection_history = deque(maxlen=DEFAULT_HISTORY_LENGTH)
@@ -50,6 +54,15 @@ class ServicePlannerCore():
         self.init_components(data_file)
 
 
+    def set_status(self, command):
+        if command == "enable":
+            self.enabled = True
+        elif command == "disable":
+            self.enabled = False
+        else:
+            logging.error(f"Unknown commad: {command}. Core enabled = {self.enabled}")
+
+    
     def set_refresh_interval(self, interval: float):
         self.refresh_interval = interval
         logging.info(f"Refresh interval set to {self.refresh_interval} seconds")
@@ -103,19 +116,19 @@ class ServicePlannerCore():
             raise ValueError("Unknown component type")
 
 
-    def load_servers(self, servers_meta):
+    def init_servers(self, servers_meta):
         logging.info("Loading GPU servers...")
         for server_id in servers_meta:
             self.servers[server_id] = self.create_component(servers_meta[server_id])
 
 
-    def load_links(self, links_meta):
+    def init_links(self, links_meta):
         logging.info("Loading network links...")
         for link_id in links_meta:
             self.links[link_id] = self.create_component(links_meta[link_id])
 
 
-    def load_connections(self, paths_meta):
+    def init_connections(self, paths_meta):
         logging.info("Loading network connections...")
         for path_id in paths_meta:
             self.connections[path_id] = {}
@@ -129,19 +142,12 @@ class ServicePlannerCore():
         with open(path_file, "r") as f:
             data = json.load(f)
         
-        self.load_links(data.get(NET_KEY))  
-        self.load_servers(data.get(SERVERS_KEY))
-        self.load_connections(data.get(COMPS_KEY))
+        self.init_links(data.get(NET_KEY))  
+        self.init_servers(data.get(SERVERS_KEY))
+        self.init_connections(data.get(COMPS_KEY))
 
 
     def set_gpu_predictions(self, preds: list[dict]) -> None:
-        """
-        Updates for gpu predictions for known servers.
-        
-        Args:
-            preds: list[dict] : Each dict contains id, prediction, confidence
-
-        """
         print("Setting gpu predictions: ", preds)
         for pred in preds:
 
@@ -157,14 +163,6 @@ class ServicePlannerCore():
 
 
     def set_net_predictions(self, preds: list[dict]) -> None:
-        """
-        Updates network link predictions.
-
-        Args:
-            preds: list[dict]  , list of dictionaries with predictions for multiple network interfaces
-        
-        """
-
         print("Setting network predictions: ", preds)
         for pred in preds: 
             link = next((self.links[id] for id in self.links if id == pred['server_id']), None)
@@ -317,22 +315,25 @@ class ServicePlannerCore():
 
 
     def update_predictions(self):
-        print("Updating predictions...")
         previous_server = self.best_server
+        if self.enabled:
+            logging.info("Updating predictions...")
 
-        self.update_gpu_predictions()
-        self.update_net_predictions()
-        
-        self.update_best_server()
+            self.update_gpu_predictions()
+            self.update_net_predictions()
+            
+            self.update_best_server()
+        else:
+            logging.info(f"Using default server {DEFAULT_SERVER_ID}")
+            self.best_server = self.servers[DEFAULT_SERVER_ID]
         
         if previous_server != self.best_server:
-            asyncio.create_task(
-                self.comm.send_recommendation(
-                    Update.UNSOLICITED.value, self.best_server.get_address() if self.best_server else None
+                asyncio.create_task(
+                    self.comm.send_recommendation(
+                        Update.UNSOLICITED.value, self.best_server.get_address() if self.best_server else None
+                    )
                 )
-            )
-            print(f"Best server updated: {self.best_server}")
-
+                logging.info(f"Best server updated: {self.best_server}")
 
 
     async def periodic_update(self):

@@ -10,6 +10,9 @@ class ControlData(BaseModel):
     sigma: Optional[float]    =  DEFAULT_SIGMA_LEVEL
     ewma: Optional[float]  = DEFAULT_EWMA_ALPHA
 
+class ToggleData(BaseModel):
+    command: str = 'enable'
+
 led_states = {
     "led1": "green",
     "led2": "yellow",
