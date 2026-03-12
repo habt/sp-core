@@ -9,18 +9,19 @@ from app.components.network import Network
 from app.core.comm import ServicePlannerComm
 from app.library.data import Update
 from app.library.settings import (
-    NET_KEY, SERVERS_KEY, COMPS_KEY,
+    NETS_KEY, SERVERS_KEY, COMPS_KEY,
     NET_PRED_ID_KEY, NET_PRED_KEY, NET_PRED_VAR_KEY,
     GPU_PRED_ID_KEY, GPU_PRED_KEY, GPU_PRED_VAR_KEY,
-    DEFAULT_EWMA_ALPHA, DEFAULT_HISTORY_LENGTH,
-    DEFAULT_SERVER_ID
+    DEFAULT_EWMA_ALPHA, DEFAULT_HISTORY_LENGTH
 )
 
-PATH_FILE = os.getcwd() + os.getenv("PATH_FILE")
+TOPOLOGY_FILE = os.getcwd() + os.getenv("TOPOLOGY_FILE")
 
 CORE_REFRESH_INTERVAL = int(os.getenv("REFRESH_INTERVAL", 3))
 HYSTERISIS_THRESHOLD = int(os.getenv("HYSTERISIS_THRESHOLD", 1))
 SIGMA_LEVEL = float(os.getenv("SIGMA_LEVEL", 3))
+
+DEFAULT_SERVER_ID = os.getenv("SIGMA_LEVEL", "jetson_4")
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "WARNING").upper()
 logging.basicConfig(level=logging.INFO)  #TODO: use the env settings instead of hardcoding the level here
@@ -135,14 +136,14 @@ class ServicePlannerCore():
             self.connections[path_id]['path'] = paths_meta[path_id]
 
 
-    def init_components(self, path_file=None):
-        path_file = PATH_FILE if path_file is None else path_file
+    def init_components(self, topo_file=None):
+        topo_file = TOPOLOGY_FILE if topo_file is None else TOPOLOGY_FILE
         
-        print(f"Loading path data from {path_file}")
-        with open(path_file, "r") as f:
+        print(f"Loading path data from {topo_file}")
+        with open(topo_file, "r") as f:
             data = json.load(f)
         
-        self.init_links(data.get(NET_KEY))  
+        self.init_links(data.get(NETS_KEY))  
         self.init_servers(data.get(SERVERS_KEY))
         self.init_connections(data.get(COMPS_KEY))
 
@@ -150,7 +151,6 @@ class ServicePlannerCore():
     def set_gpu_predictions(self, preds: list[dict]) -> None:
         print("Setting gpu predictions: ", preds)
         for pred in preds:
-
             server = next((self.servers[id] for id in self.servers if  id == pred['node_id']), None)
 
             print("Found server for gpu prediction: ", server.address if server else "None")
@@ -397,7 +397,7 @@ class ServicePlannerCore():
 
 
 if __name__ == "__main__":
-    path_file = "/home/habtes/sp_core/app/config/paths.json"
+    TOPOLOGY_FILE = "/home/habtes/sp_core/app/config/paths.json"
     sp_comm = ServicePlannerComm()
-    sp_core = ServicePlannerCore(sp_comm, path_file)
+    sp_core = ServicePlannerCore(sp_comm, TOPOLOGY_FILE)
     logging.info(f"Loaded connections: {sp_core.connections}")

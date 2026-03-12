@@ -1,5 +1,5 @@
 
-NET_KEY = "nets"
+NETS_KEY = "nets"
 SERVERS_KEY = "gpus"
 COMPS_KEY = "comps"
 
@@ -22,5 +22,4 @@ MAX_SERVER_DELAY_VARIABILITY = 200      #ms, upper bound on the variability of a
 MAX_NET_DELAY = 1000         #ms, upper bound on the delay of a network link
 MAX_NET_DELAY_VARIABILITY = 200     #ms, upper bound on the variability of a network link's delay
 
-DEFAULT_SERVER_ID = "jetson_1"
 
