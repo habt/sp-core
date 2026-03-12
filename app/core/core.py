@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import math
 import asyncio
 import logging
 from collections import deque,  Counter
@@ -278,26 +279,43 @@ class ServicePlannerCore():
 
     def update_best_server_with_ewma(self) -> None:
         # Update EWMA delay for each connection
-        for conn in self.connections:
-            if self.connections[conn].get('ewma_delay') is not None:
-                self.connections[conn]['ewma_delay'] = (
-                    (1 - self.ewma_alpha) * self.connections[conn]['ewma_delay'] +
-                    self.ewma_alpha * self.connections[conn]['e2e_delay']
+        for conn_id, conn in self.connections.items():
+            e2e = conn.get('e2e_delay')
+            if e2e is None:
+                logging.warning(f"No e2e_delay for connection {conn_id}, skipping EWMA update")
+                continue
+
+            prev = conn.get('ewma_delay')
+
+            # if previous EWMA is missing or NaN, initialize with current e2e_delay
+            if prev is None or (isinstance(prev, float) and math.isnan(prev)):
+                conn['ewma_delay'] = e2e
+            else:
+                conn['ewma_delay'] = (
+                    (1 - self.ewma_alpha) * prev +
+                    self.ewma_alpha * e2e
                 )
 
-            else:
-                self.connections[conn]['ewma_delay'] = self.connections[conn]['e2e_delay']
+        # filter connections that actually have a numeric ewma_delay
+        valid_conns = [c for c in self.connections.values()
+                    if 'ewma_delay' in c and not math.isnan(c['ewma_delay']) and c['ewma_delay'] is not None]
+        
+        if not valid_conns:
+            logging.error("No valid EWMA delays available to select fastest connection")
+            self.best_server = self.servers.get(DEFAULT_SERVER_ID)
+            return
 
-        fastest_conn = min(
-            self.connections.values(),
-            key=lambda x: x['ewma_delay']
-        )
+        fastest_conn = min(valid_conns, key=lambda x: x['ewma_delay'])
 
-        shortest_conn_server_id = fastest_conn['server_id']
-        self.best_server = self.servers[shortest_conn_server_id]
+        shortest_conn_server_id = fastest_conn.get('server_id')
+        if shortest_conn_server_id is None:
+            logging.error("Fastest connection missing server_id")
+            return
+
+        self.best_server = self.servers.get(shortest_conn_server_id)
         logging.info(
-            f"Current fastest server based on EWMA: {shortest_conn_server_id}: {fastest_conn['ewma_delay']} ")
-
+            f"NEW Current fastest server based on EWMA: {shortest_conn_server_id}: {fastest_conn['ewma_delay']}"
+        )
 
 
     def update_best_server(self) -> None:
