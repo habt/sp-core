@@ -161,20 +161,11 @@ class ServicePlannerCore():
                     pred[GPU_PRED_KEY], 
                     pred[GPU_PRED_VAR_KEY]
                     )
-
-
-    def set_net_predictions(self, preds: list[dict]) -> None:
-        print("Setting network predictions: ", preds)
-        for pred in preds: 
-            link = next((self.links[id] for id in self.links if id == pred['server_id']), None)
-            
-            print("Found link for net prediction: ", link.subtype if link else "None")
-            if link:
-                
-                link.set_prediction(
-                    pred[NET_PRED_KEY], 
-                    pred[NET_PRED_VAR_KEY]
-                    )
+    
+    
+    def set_gpu_predictions_to_nan(self):
+        for server in self.servers.values():
+            server.set_prediction(float('nan'), float('nan'))
 
 
     def update_gpu_predictions(self):
@@ -185,9 +176,30 @@ class ServicePlannerCore():
             self.set_gpu_predictions(
                 gpu_predictions.get("predictions", [])
                 )
+            print("GPU predictions updated: ", gpu_predictions)
+        else:
+            logging.warning("No GPU predictions found. Setting predictions to nan")
+            self.set_gpu_predictions_to_nan()
 
-        print("GPU predictions updated: ", gpu_predictions)
 
+    def set_net_predictions(self, preds: list[dict]) -> None:
+        print("Setting network predictions: ", preds)
+        for pred in preds: 
+            link = next((self.links[id] for id in self.links if id == pred['server_id']), None)
+            
+            logging.info("Found link for net prediction: ", link.subtype if link else "None")
+            if link:
+                
+                link.set_prediction(
+                    pred[NET_PRED_KEY], 
+                    pred[NET_PRED_VAR_KEY]
+                    )
+                
+    
+    def set_net_predictions_to_nan(self):
+        for link in self.links.values():
+            link.set_prediction(float('nan'), float('nan'))
+    
 
     def update_net_predictions(self):
         logging.info("Updating network predictions...")
@@ -197,8 +209,10 @@ class ServicePlannerCore():
             self.set_net_predictions(
                 list(net_predictions.get("servers", {}).values())
                 )
-
-        print("Network predictions updated: ", net_predictions)
+            logging.info("Network predictions updated: ", net_predictions)
+        else:
+            logging.warning("No network predictions found. Setting predictions to nan")
+            self.set_net_predictions_to_nan()
 
 
     def calculate_connection_delay(self, connection) -> dict:
@@ -314,7 +328,7 @@ class ServicePlannerCore():
 
         self.best_server = self.servers.get(shortest_conn_server_id)
         logging.info(
-            f"NEW Current fastest server based on EWMA: {shortest_conn_server_id}: {fastest_conn['ewma_delay']}"
+            f"Current fastest server based on EWMA: {shortest_conn_server_id}: {fastest_conn['ewma_delay']}"
         )
 
 
@@ -323,8 +337,8 @@ class ServicePlannerCore():
         
         # Calculate end-to-end delays for all connections
         for conn in self.connections:
-            delay = self.calculate_connection_delay(
-                self.connections[conn]['path'])
+            delay = self.calculate_connection_delay(self.connections[conn]['path'])
+
             self.connections[conn]['e2e_delay'] = delay['delay']
             self.connections[conn]['server_id'] = delay['id']
 
