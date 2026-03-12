@@ -235,7 +235,7 @@ class ServicePlannerCore():
         return {"id": server_id, "delay": tot}
 
 
-    def update_best_server_with_hysterisis_counter(self) -> None:   
+    def select_best_server_with_hysterisis_counter(self) -> None:   
         # Select the server with the lowest end-to-end delay
         shortest_conn_server_id = min(
             self.connections.values(),
@@ -271,7 +271,7 @@ class ServicePlannerCore():
         print(f"Best server: {self.best_server.get_id() if self.best_server else 'None'}")
     
 
-    def update_best_server_with_selection_history(self) -> None:
+    def select_best_server_with_selection_history(self) -> None:
         shortest_conn_server_id = min(
             self.connections.values(),
             key=lambda x: x['e2e_delay']
@@ -291,7 +291,7 @@ class ServicePlannerCore():
             self.best_server = None
 
 
-    def update_best_server_with_ewma(self) -> None:
+    def select_best_server_with_ewma(self) -> None:
         # Update EWMA delay for each connection
         for conn_id, conn in self.connections.items():
             e2e = conn.get('e2e_delay')
@@ -343,10 +343,10 @@ class ServicePlannerCore():
             self.connections[conn]['server_id'] = delay['id']
 
         #self.update_best_server_with_hysterisis_counter()
-        self.update_best_server_with_ewma()
+        self.select_best_server_with_ewma()
 
 
-    def update_predictions(self):
+    def update_server_selection(self):
         previous_server = self.best_server
         if self.enabled:
             logging.info("Updating predictions...")
@@ -374,7 +374,7 @@ class ServicePlannerCore():
             while not self.stop_event.is_set():
                 start = time.perf_counter()
 
-                self.update_predictions()
+                self.update_server_selection()
                 elapsed = time.perf_counter() - start
 
                 sleep_time = max(0, self.refresh_interval - elapsed)
