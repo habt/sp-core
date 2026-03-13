@@ -13,11 +13,11 @@
     "jetson_4": {"id": "jetson_4","type": "gpu", "subtype": "s-gpu", "ip":"172.22.232.212", "cluster": "2" }
   },
 
-  "comps": {
-     "svr1_0": ["Server_1_net", "jetson_1"],
-     "svr2_0": ["Server_2_net", "jetson_2"],
-     "svr3_0": ["Server_3_net", "jetson_3"],
-     "svr4_0": ["Server_4_net", "jetson_4"]
+  "conns": {
+     "svr1_0": {"id": "svr1_0", "path": ["Server_1_net", "jetson_1"]},
+     "svr2_0": {"id": "svr2_0", "path": ["Server_2_net", "jetson_2"]},
+     "svr3_0": {"id": "svr3_0", "path": ["Server_3_net", "jetson_3"]},
+     "svr4_0": {"id": "svr4_0", "path": ["Server_4_net", "jetson_4"]}
 
   }
 }

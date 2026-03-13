@@ -10,17 +10,20 @@ from app.components.network import Network
 from app.core.comm import ServicePlannerComm
 from app.library.data import Update
 from app.library.settings import (
-    NETS_KEY, SERVERS_KEY, COMPS_KEY,
+    NETS_KEY, SERVERS_KEY, CONNECTIONS_KEY,
     NET_PRED_ID_KEY, NET_PRED_KEY, NET_PRED_VAR_KEY,
     GPU_PRED_ID_KEY, GPU_PRED_KEY, GPU_PRED_VAR_KEY,
-    DEFAULT_EWMA_ALPHA, DEFAULT_HISTORY_LENGTH
+    DEFAULT_EWMA_ALPHA, DEFAULT_HISTORY_LENGTH,
+    DEFAULT_SIGMA_LEVEL, DEFAULT_SWITCHING_THRESHOLD
 )
 
 TOPOLOGY_FILE = os.getcwd() + os.getenv("TOPOLOGY_FILE")
 
-CORE_REFRESH_INTERVAL = int(os.getenv("REFRESH_INTERVAL", 3))
-HYSTERISIS_THRESHOLD = int(os.getenv("HYSTERISIS_THRESHOLD", 1))
-SIGMA_LEVEL = float(os.getenv("SIGMA_LEVEL", 3))
+CORE_REFRESH_INTERVAL = int(os.getenv("REFRESH_INTERVAL", 2))
+HYSTERISIS_THRESHOLD = int(os.getenv("HYSTERISIS_THRESHOLD",1))
+SIGMA_LEVEL = float(os.getenv("SIGMA_LEVEL", DEFAULT_SIGMA_LEVEL))
+EWMA_ALPHA = float(os.getenv("EWMA_COEFFICIENT", DEFAULT_EWMA_ALPHA))
+SWITCHING_THRESOLD = float(os.getenv("SWITCHING_THRESHOLD", DEFAULT_SWITCHING_THRESHOLD))
 
 DEFAULT_SERVER_ID = os.getenv("SIGMA_LEVEL", "jetson_4")
 
@@ -37,6 +40,7 @@ class ServicePlannerCore():
         self.comm = comm
         self.periodic_update_task = None
         
+        self.best_connection = None
         self.best_server = None
         self.candidate_server = None  # used by the hyterisis counter method of selection
         
@@ -44,12 +48,14 @@ class ServicePlannerCore():
         self.refresh_interval = CORE_REFRESH_INTERVAL
         self.hysterisis_threshold = HYSTERISIS_THRESHOLD
         self.sigma_level = SIGMA_LEVEL
-        self.ewma_alpha = DEFAULT_EWMA_ALPHA
+        self.ewma_alpha = EWMA_ALPHA
+        self.switching_threshold = SWITCHING_THRESOLD
         self.hysterisis_counter = 0
 
         self.delay_history = deque(maxlen=DEFAULT_HISTORY_LENGTH)
         self.selection_history = deque(maxlen=DEFAULT_HISTORY_LENGTH)
 
+        self.topology_file = TOPOLOGY_FILE
         self.servers = {}
         self.links = {}
         self.connections = {}
@@ -130,15 +136,16 @@ class ServicePlannerCore():
             self.links[link_id] = self.create_component(links_meta[link_id])
 
 
-    def init_connections(self, paths_meta):
+    def init_connections(self, conns_meta):
         logging.info("Loading network connections...")
-        for path_id in paths_meta:
-            self.connections[path_id] = {}
-            self.connections[path_id]['path'] = paths_meta[path_id]
+        for conn_id in conns_meta:
+            self.connections[conn_id] = {}
+            self.connections[conn_id]['id'] = conns_meta[conn_id]['id']
+            self.connections[conn_id]['path'] = conns_meta[conn_id]['path']
 
 
     def init_components(self, topo_file=None):
-        topo_file = TOPOLOGY_FILE if topo_file is None else TOPOLOGY_FILE
+        topo_file = self.topology_file if topo_file is None else topo_file
         
         print(f"Loading path data from {topo_file}")
         with open(topo_file, "r") as f:
@@ -146,8 +153,7 @@ class ServicePlannerCore():
         
         self.init_links(data.get(NETS_KEY))  
         self.init_servers(data.get(SERVERS_KEY))
-        self.init_connections(data.get(COMPS_KEY))
-
+        self.init_connections(data.get(CONNECTIONS_KEY))
 
 
     def update_gpu_predictions(self):
@@ -279,7 +285,7 @@ class ServicePlannerCore():
             self.best_server = None
 
 
-    def select_best_server_with_ewma(self) -> None:
+    def update_ewma_delay_of_connections(self):
         # Update EWMA delay for each connection
         for conn_id, conn in self.connections.items():
             e2e = conn.get('e2e_delay')
@@ -299,6 +305,11 @@ class ServicePlannerCore():
                 )
             logging.info(f"{conn.get('path')}: current delay={conn.get('e2e_delay')}, ewma delay={conn.get('ewma_delay')}")
 
+
+
+    def select_best_server_with_ewma(self) -> None:  
+        self.update_ewma_delay_of_connections()
+        
         # filter connections that actually have a numeric ewma_delay
         valid_conns = [c for c in self.connections.values()
                     if 'ewma_delay' in c and not math.isnan(c['ewma_delay']) and c['ewma_delay'] is not None]
@@ -308,17 +319,54 @@ class ServicePlannerCore():
             self.best_server = self.servers.get(DEFAULT_SERVER_ID)
             return
 
-        fastest_conn = min(valid_conns, key=lambda x: x['ewma_delay'])
+        candidate_conn = min(valid_conns, key=lambda x: x['ewma_delay'])
 
-        shortest_conn_server_id = fastest_conn.get('server_id')
-        if shortest_conn_server_id is None:
-            logging.error("Fastest connection missing server_id")
-            return
+        if self.best_connection is not None:
+            current_best_conn = None
+            
+            for conn in self.connections.values():
+                if conn.get('id') == self.best_connection.get('id'):
+                    current_best_conn = conn
+                    break
+            
+            if candidate_conn.get('id') != current_best_conn.get('id'):
+                improvement = current_best_conn.get('ewma_delay') - candidate_conn.get('ewma_delay')
+                logging.info(f"Improvement by candidate {candidate_conn.get('server_id')}: {improvement}, Threshold: {self.switching_threshold}")
+                
+                if improvement > self.switching_threshold:
+                    
+                    self.best_connection = candidate_conn
+                    new_best_conn_server_id = candidate_conn.get('server_id')
+                    
+                    if new_best_conn_server_id is None:
+                        logging.error("Fastest connection missing server_id")
+                        return
 
-        self.best_server = self.servers.get(shortest_conn_server_id)
+                    self.best_server = self.servers.get(new_best_conn_server_id)
+                    logging.info(
+                        "Switching threshold met. Changing from %s to %s",
+                        current_best_conn.get('server_id'),
+                        self.best_connection.get('server_id')
+                        )
+                else:
+                    logging.info("Switching threshold NOT met." 
+                                 "Continuing with current server."
+                                 )
+            else:
+                logging.info("Candidate connection same as current connection."
+                             "Continuing with current server."
+                             )  
+        else:
+            self.best_connection = candidate_conn
+            new_best_conn_server_id = candidate_conn['server_id']
+
+            self.best_server = self.servers.get(new_best_conn_server_id)
+        
         logging.info(
-            f"Current fastest server based on EWMA: {shortest_conn_server_id}: {fastest_conn['ewma_delay']}"
-        )
+            "Current fastest server: %s, EWMA delay: %s",
+            self.best_server.get_id(),
+            self.best_connection['ewma_delay']
+            )
 
 
     def update_best_server(self) -> None:
@@ -354,7 +402,7 @@ class ServicePlannerCore():
                         Update.UNSOLICITED.value, self.best_server.get_address() if self.best_server else None
                     )
                 )
-                logging.info(f"Best server updated: {self.best_server}")
+                logging.info(f"Best server update sent: {self.best_server.get_id()}")
 
 
     async def periodic_update(self):
