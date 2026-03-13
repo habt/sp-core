@@ -24,3 +24,4 @@ MAX_NET_DELAY = 1000         #ms, upper bound on the delay of a network link
 MAX_NET_DELAY_VARIABILITY = 200     #ms, upper bound on the variability of a network link's delay
 
 
+REQUESTS_TIMEOUT = 0.4   # if the request timeout is bigger than half of the update interval the requests block the event loop
