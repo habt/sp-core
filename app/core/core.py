@@ -220,7 +220,6 @@ class ServicePlannerCore():
             if comp:
                 tot += comp.get_sigma_delay()
 
-        logging.info(f"Calculated delay for connection {connection}: {tot}")
         return {"id": server_id, "delay": tot}
 
 
@@ -298,6 +297,7 @@ class ServicePlannerCore():
                     (1 - self.ewma_alpha) * prev +
                     self.ewma_alpha * e2e
                 )
+            logging.info(f"{conn.get('path')}: current delay={conn.get('e2e_delay')}, ewma delay={conn.get('ewma_delay')}")
 
         # filter connections that actually have a numeric ewma_delay
         valid_conns = [c for c in self.connections.values()
