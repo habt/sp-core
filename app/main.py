@@ -9,9 +9,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.library.data import *
 from app.core.core import *
 from app.core.comm import *
-from app.library.data import ControlData, led_states
-from app.library.helper import log_error, log_info, update_led_states
+from app.library.data import ControlData
+from app.library.helper import update_led_states
 
+BASE_DIR = Path(__file__).resolve().parent
+FRONTEND_DIR = BASE_DIR / "frontend"
 
 level = os.getenv("LOG_LEVEL", "WARNING").upper()
 logging.basicConfig(level=logging.INFO)  #TODO: use the env settings instead of hardcoding the level here
@@ -26,9 +28,8 @@ async def lifespan(app: FastAPI):
     yield
     await sp_core.stop_periodic_update()
 
+
 def init_fastapi_app(sp_core) -> FastAPI:
-
-
     app = FastAPI(lifespan=lifespan)
 
     app.add_middleware(
@@ -41,16 +42,16 @@ def init_fastapi_app(sp_core) -> FastAPI:
 
     return app
 
+
+# Initialize app and set static file location for frontend
 app = init_fastapi_app(sp_core)
-
-BASE_DIR = Path(__file__).resolve().parent
-FRONTEND_DIR = BASE_DIR / "frontend"
-
 app.mount("/frontend", StaticFiles(directory=FRONTEND_DIR), name="frontend")
+
 
 @app.get("/")
 def read_index():
     return FileResponse(FRONTEND_DIR / "index.html")
+
 
 @app.websocket("/corews")
 async def recommendation_websocket_endpoint(websocket: WebSocket):
@@ -66,10 +67,15 @@ async def recommendation_websocket_endpoint(websocket: WebSocket):
 
 @app.get("/led/status")
 def get_status():
-    update_led_states(
+    led_states = update_led_states(
         sp_core.best_server.get_id() if sp_core.best_server else "jetson_1", 
         is_best=True)
-    return led_states
+    if led_states != {}:
+        return led_states
+    else:
+        logging.warning("LED states not updates")
+        return led_colors
+
 
 @app.get("/set/{led}/{color}")
 def set_led(led: str, color: str):

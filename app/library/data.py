@@ -13,7 +13,7 @@ class ControlData(BaseModel):
 class ToggleData(BaseModel):
     command: str = 'enable'
 
-led_states = {
+led_colors = {
     "led1": "green",
     "led2": "yellow",
     "led3": "blue",
