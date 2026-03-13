@@ -33,7 +33,7 @@
 
     .content {
       display: grid;
-      grid-template-columns: 1fr 1fr; /* 25% / 50% / 25% */
+      grid-template-columns: 2fr 1fr; /* 25% / 50% / 25% */
       width: 100%;
     }
 
@@ -41,12 +41,24 @@
     .led-panel {
       background: #1a1a1a;
       display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start; /* aligns with top of content */
+      flex-direction: row;      /* arrange LEDs horizontally */
+      align-items: flex-start;  /* align to top of panel */
+      justify-content: center;
       padding-top: 40px;           /* match main content padding */
       gap: 30px;
       border-right: 2px solid #333;
+      flex-wrap: nowrap;           /* change to wrap if you want multiple rows */
+    }
+
+    .image-container {
+      position: relative; /* needed for absolute positioning inside */
+      display: inline-block;
+    }
+
+    .image-container img {
+      display: block;
+      max-width: 100%;
+      height: auto;
     }
 
     /* 25% Control Panel */
@@ -80,14 +92,17 @@
 
     .led-row {
       display: flex;
+      flex-direction: column;
       align-items: center;     /* vertical centering */
       justify-content: center; /* horizontal centering */
-      gap: 15px;
-      width: 100%;
+      gap: 8px;
+      width: 100%;              /* allow compact items so they sit side-by-side */
+
     }
 
    .led-label {
-     font-size: 16px;
+     font-size: 14px;
+     margin-top: 4px;
    }
 
     .red    { background: red;    box-shadow: 0 0 25px red; }
@@ -126,31 +141,42 @@
     </div>
 
     <div class="content">
-      <div class="led-panel">
-        <h2>Servers </h2>
+      <div class="charts">
+        <div class="led-panel">
+          <h2> </h2>
 
-        <div class="led-row">
-          <div id="led1" class="led"></div>
-          <span class="led-label">S1</span>
+          <div class="led-row">
+            <div id="led1" class="led"></div>
+            <span class="led-label">Server1</span>
+          </div>
+
+          <div class="led-row">
+            <div id="led2" class="led"></div>
+            <span class="led-label">Server2</span>
+          </div>
+
+          <div class="led-row">
+            <div id="led3" class="led"></div>
+            <span class="led-label">Server3</span>
+          </div>
+
+          <div class="led-row">
+            <div id="led4" class="led"></div>
+            <span class="led-label">Server4</span>
+          </div>
+
         </div>
 
-        <div class="led-row">
-          <div id="led2" class="led"></div>
-          <span class="led-label">S2</span>
-        </div>
+        <div class="image-container">
+          <img src="frontend/connected_car_light.png" alt="Panel Image">
 
-        <div class="led-row">
-          <div id="led3" class="led"></div>
-          <span class="led-label">S3</span>
+          <!-- Buttons 
+          <button class="image-button" id="btn1" onclick="alert('Button 1 clicked')"></button>
+          <button class="image-button" id="btn2" onclick="alert('Button 2 clicked')"></button>
+          <button class="image-button" id="btn3" onclick="alert('Button 3 clicked')"></button>
+          -->
         </div>
-
-        <div class="led-row">
-          <div id="led4" class="led"></div>
-          <span class="led-label">S4</span>
-        </div>
-
       </div>
-
       <!-- Control Panel -->
       <div class="control-panel">
         <h2>SP Controls</h2>
@@ -166,7 +192,7 @@
         <label>Sigma Level (0-6):</label>
         <input type="number" id="value3">
 
-        <label>EWMA Coeficient (0-1):</label>
+        <label>EWMA Coefficient (0-1):</label>
         <input type="number" id="value4">
 
         <label>Refresh Interval (secs):</label>
@@ -238,6 +264,34 @@ async function sendControl() {
 
   alert("Control data sent!");
 }
+
+
+// --- new: sync led-panel width to image width ---
+function syncLedPanelWidth() {
+  const img = document.querySelector('.image-container img');
+  const ledPanel = document.querySelector('.led-panel');
+  if (!img || !ledPanel) return;
+
+  const applyWidth = () => {
+    const w = Math.round(img.getBoundingClientRect().width);
+    // apply width in px so led-panel equals the image width
+    ledPanel.style.width = w + 'px';
+  };
+
+  // apply once now if image already loaded, otherwise after load
+  if (img.complete) {
+    applyWidth();
+  } else {
+    img.addEventListener('load', applyWidth, { once: true });
+  }
+
+  // keep in sync on resize
+  window.addEventListener('resize', applyWidth);
+}
+
+// call when DOM/script is ready
+syncLedPanelWidth();
+
 
 setInterval(fetchStatus, refreshInterval);
 fetchStatus();
