@@ -271,6 +271,25 @@ The following parameters can be adjusted via the web UI.
 
 ---
 
+## Core Update Interval
+
+Input:
+
+```
+value1
+```
+
+Type: Integer
+Range: `1 – `
+
+Purpose:
+
+```
+sleep_time = max(0, self.update_interval - elapsed)
+await asyncio.sleep(sleep_time)
+
+---
+
 ## Sigma Level
 
 Input:

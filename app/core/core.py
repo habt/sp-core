@@ -20,7 +20,7 @@ from app.library.settings import (
 TOPOLOGY_FILE = os.getcwd() + os.getenv("TOPOLOGY_FILE")
 
 KEEP_ALIVE_INTERVAL = int(os.getenv("KEEP_ALIVE_INTERVAL", 2))
-CORE_REFRESH_INTERVAL = int(os.getenv("REFRESH_INTERVAL", 2))
+CORE_UPDATE_INTERVAL = int(os.getenv("CORE_UPDATE_INTERVAL", 2))
 HYSTERISIS_THRESHOLD = int(os.getenv("HYSTERISIS_THRESHOLD",1))
 SIGMA_LEVEL = float(os.getenv("SIGMA_LEVEL", DEFAULT_SIGMA_LEVEL))
 EWMA_ALPHA = float(os.getenv("EWMA_COEFFICIENT", DEFAULT_EWMA_ALPHA))
@@ -47,7 +47,7 @@ class ServicePlannerCore():
         self.default_server = DEFAULT_SERVER
         
         self.keep_alive_interval = KEEP_ALIVE_INTERVAL
-        self.refresh_interval = CORE_REFRESH_INTERVAL
+        self.update_interval = CORE_UPDATE_INTERVAL
         self.hysterisis_threshold = HYSTERISIS_THRESHOLD
         self.sigma_level = SIGMA_LEVEL
         self.ewma_alpha = EWMA_ALPHA
@@ -74,13 +74,13 @@ class ServicePlannerCore():
 
     
     def set_refresh_interval(self, interval: float):
-        self.refresh_interval = interval
-        logging.info(f"Refresh interval set to {self.refresh_interval} seconds")
+        self.update_interval = interval
+        logging.info(f"Refresh interval set to {self.update_interval} seconds")
     
 
     def set_hysterisis_threshold(self, window: float):
         if window is not None:
-            self.hysterisis_threshold = window / self.refresh_interval
+            self.hysterisis_threshold = window / self.update_interval
             logging.info(f"Hysterisis threshold set to {self.hysterisis_threshold}")
     
 
@@ -425,7 +425,7 @@ class ServicePlannerCore():
                 self.update_server_selection()
                 elapsed = time.perf_counter() - start
 
-                sleep_time = max(0, self.refresh_interval - elapsed)
+                sleep_time = max(0, self.update_interval - elapsed)
                 await asyncio.sleep(sleep_time)
                 print(f"Periodic update completed in {elapsed:.2f} seconds, sleeping for {sleep_time:.2f} seconds")
         
