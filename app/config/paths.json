@@ -1,16 +1,16 @@
 {
   "nets": {
-    "Server_1_net": {"type": "network", "subtype": "wifi1" },
-    "Server_2_net": {"type": "network", "subtype": "wifi1" },
-    "Server_3_net": {"type": "network", "subtype": "wifi2" },
-    "Server_4_net": {"type": "network", "subtype": "wifi2" }
+    "Server_1_net": {"id": "server_1_net", "type": "network", "subtype": "wifi1" },
+    "Server_2_net": {"id": "server_2_net", "type": "network", "subtype": "wifi1" },
+    "Server_3_net": {"id": "server_3_net", "type": "network", "subtype": "wifi2" },
+    "Server_4_net": {"id": "server_4_net", "type": "network", "subtype": "wifi2" }
   },
 
   "gpus": {
-    "jetson_1": {"id": "jetson_1","type": "gpu", "subtype": "l-gpu", "ip":"172.22.232.196" },
-    "jetson_2": {"id": "jetson_2","type": "gpu", "subtype": "s-gpu", "ip":"172.22.232.197" },
-    "jetson_3": {"id": "jetson_3","type": "gpu", "subtype": "l-gpu", "ip":"172.22.232.211" },
-    "jetson_4": {"id": "jetson_4","type": "gpu", "subtype": "s-gpu", "ip":"172.22.232.212" }
+    "jetson_1": {"id": "jetson_1","type": "gpu", "subtype": "l-gpu", "ip":"172.22.232.196", "cluster": "1" },
+    "jetson_2": {"id": "jetson_2","type": "gpu", "subtype": "s-gpu", "ip":"172.22.232.197", "cluster": "1" },
+    "jetson_3": {"id": "jetson_3","type": "gpu", "subtype": "l-gpu", "ip":"172.22.232.211", "cluster": "2" },
+    "jetson_4": {"id": "jetson_4","type": "gpu", "subtype": "s-gpu", "ip":"172.22.232.212", "cluster": "2" }
   },
 
   "comps": {

@@ -9,6 +9,7 @@ class Network(Component):
     def __init__(self, meta):
         super().__init__()
         self.subtype = meta['subtype']
+        self.id = meta['id']
 
     def get_pred_delay(self) -> float:
         if self.pred_delay is None:

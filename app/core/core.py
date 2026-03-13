@@ -149,70 +149,59 @@ class ServicePlannerCore():
         self.init_connections(data.get(COMPS_KEY))
 
 
-    def set_gpu_predictions(self, preds: list[dict]) -> None:
-        print("Setting gpu predictions: ", preds)
-        for pred in preds:
-            server = next((self.servers[id] for id in self.servers if  id == pred['node_id']), None)
-
-            print("Found server for gpu prediction: ", server.address if server else "None")
-            if server:
-                
-                server.set_prediction(
-                    pred[GPU_PRED_KEY], 
-                    pred[GPU_PRED_VAR_KEY]
-                    )
-    
-    
-    def set_gpu_predictions_to_nan(self):
-        for server in self.servers.values():
-            server.set_prediction(float('nan'), float('nan'))
-
 
     def update_gpu_predictions(self):
         logging.info("Updating gpu predictions...")
         
         gpu_predictions = self.comm.request_gpu_update()
-        if gpu_predictions is not None:
-            self.set_gpu_predictions(
-                gpu_predictions.get("predictions", [])
-                )
-            print("GPU predictions updated: ", gpu_predictions)
-        else:
-            logging.warning("No GPU predictions found. Setting predictions to nan")
-            self.set_gpu_predictions_to_nan()
-
-
-    def set_net_predictions(self, preds: list[dict]) -> None:
-        print("Setting network predictions: ", preds)
-        for pred in preds: 
-            link = next((self.links[id] for id in self.links if id == pred['server_id']), None)
+        
+        if gpu_predictions is not None:                                                         # update the gpu predictions of each server/gpu if gpu predictions are available
             
-            logging.info("Found link for net prediction: ", link.subtype if link else "None")
-            if link:
-                
-                link.set_prediction(
-                    pred[NET_PRED_KEY], 
-                    pred[NET_PRED_VAR_KEY]
-                    )
-                
-    
-    def set_net_predictions_to_nan(self):
-        for link in self.links.values():
-            link.set_prediction(float('nan'), float('nan'))
-    
+            preds = gpu_predictions.get("predictions", [])
+            logging.info("Setting gpu predictions of servers: %s", preds)
+            
+            for pred in preds:
+                server = next((self.servers[id] for id in self.servers if  id == pred['node_id']), None)
+
+                #logging.info("Found server for gpu prediction: %s", server.address if server else "None")
+                if server:
+                    
+                    server.set_prediction(
+                        pred[GPU_PRED_KEY], 
+                        pred[GPU_PRED_VAR_KEY]
+                        )
+            logging.info("GPU predictions updated: %s", gpu_predictions)
+        else:                                                                               # set the gpu predictions of each server/gpu to nan if gpu predictions do not exist
+            logging.warning("No GPU predictions found. Setting predictions to nan")
+            for server in self.servers.values():
+                server.set_prediction(float('nan'), float('nan'))
+
+
 
     def update_net_predictions(self):
         logging.info("Updating network predictions...")
 
         net_predictions = self.comm.request_net_update()
-        if net_predictions is not None:
-            self.set_net_predictions(
-                list(net_predictions.get("servers", {}).values())
-                )
-            logging.info("Network predictions updated: ", net_predictions)
-        else:
+        
+        if net_predictions is not None:                                                     #  update the network predictions of each link if network predictions are available
+            preds = net_predictions.get("servers", {}).values()
+            logging.info("Setting network predictions: %s", preds)
+            
+            for pred in preds: 
+                link = next((self.links[id] for id in self.links if id == pred['server_id']), None)
+                
+                #logging.info("Found link for net prediction: %s", link.id if link else "None")
+                if link:
+                    
+                    link.set_prediction(
+                        pred[NET_PRED_KEY], 
+                        pred[NET_PRED_VAR_KEY]
+                        )
+            logging.info("Network predictions updated: %s", net_predictions)
+        else:                                                                                    # set the network predictions of each link to nan if network predictions do not exist
             logging.warning("No network predictions found. Setting predictions to nan")
-            self.set_net_predictions_to_nan()
+            for link in self.links.values():
+                link.set_prediction(float('nan'), float('nan'))
 
 
     def calculate_connection_delay(self, connection) -> dict:

@@ -1,9 +1,11 @@
+import logging
 from collections import deque
 from app.library.settings import DEFAULT_HISTORY_LENGTH, DEFAULT_SIGMA_LEVEL, DEFAULT_EWMA_ALPHA
 
 class Component():
 
     def __init__(self):
+        self.id = None
         self.pred_delay = None
         self.stdv_delay = None
         self.sigma_delay = None
@@ -16,6 +18,7 @@ class Component():
         self.sigma_level = sigma_level
 
     def set_prediction(self, pred: float, var: float):
+        logging.info(f"Setting predictions for {self.id}. Prediction: {pred}, Stddev: {var}")
         self.pred_delay = pred if pred is not None else float('nan')
         self.stdv_delay = var if var is not None else float('nan')
         self.update_sigma_delay()
