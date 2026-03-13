@@ -15,7 +15,7 @@ GPU_PRED_VAR_KEY = "uncertainty_std_ms"
 DEFAULT_SIGMA_LEVEL = 3  # default number of standard deviations to add to the mean prediction to get the sigma delay
 DEFAULT_HISTORY_LENGTH = 5 # default length of the history
 DEFAULT_EWMA_ALPHA = 0.5    # this is the default smoothing factor for the exponentially weighted moving average (EWMA) of delay estimates
-DEFAULT_SWITCHING_THRESHOLD = 0  # the improvement in milliseconds that would trigger a server change
+DEFAULT_SWITCHING_THRESHOLD_MS = 10  # the improvement in milliseconds that would trigger a server change
 
 # MAX delay values to be used when prediction is missing or very uncertain
 MAX_SERVER_DELAY = 1000     #ms, upper bound on the delay of a server

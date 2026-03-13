@@ -14,16 +14,17 @@ from app.library.settings import (
     NET_PRED_ID_KEY, NET_PRED_KEY, NET_PRED_VAR_KEY,
     GPU_PRED_ID_KEY, GPU_PRED_KEY, GPU_PRED_VAR_KEY,
     DEFAULT_EWMA_ALPHA, DEFAULT_HISTORY_LENGTH,
-    DEFAULT_SIGMA_LEVEL, DEFAULT_SWITCHING_THRESHOLD
+    DEFAULT_SIGMA_LEVEL, DEFAULT_SWITCHING_THRESHOLD_MS
 )
 
 TOPOLOGY_FILE = os.getcwd() + os.getenv("TOPOLOGY_FILE")
 
+KEEP_ALIVE_INTERVAL = int(os.getenv("KEEP_ALIVE_INTERVAL", 2))
 CORE_REFRESH_INTERVAL = int(os.getenv("REFRESH_INTERVAL", 2))
 HYSTERISIS_THRESHOLD = int(os.getenv("HYSTERISIS_THRESHOLD",1))
 SIGMA_LEVEL = float(os.getenv("SIGMA_LEVEL", DEFAULT_SIGMA_LEVEL))
 EWMA_ALPHA = float(os.getenv("EWMA_COEFFICIENT", DEFAULT_EWMA_ALPHA))
-SWITCHING_THRESOLD = float(os.getenv("SWITCHING_THRESHOLD", DEFAULT_SWITCHING_THRESHOLD))
+SWITCHING_THRESOLD = float(os.getenv("SWITCHING_THRESHOLD_MS", DEFAULT_SWITCHING_THRESHOLD_MS))
 
 DEFAULT_SERVER_ID = os.getenv("SIGMA_LEVEL", "jetson_4")
 
@@ -39,12 +40,13 @@ class ServicePlannerCore():
         self.enabled = True
         self.comm = comm
         self.periodic_update_task = None
+        self.update_send_time = None
         
         self.best_connection = None
         self.best_server = None
         self.candidate_server = None  # used by the hyterisis counter method of selection
         
-
+        self.keep_alive_interval = KEEP_ALIVE_INTERVAL
         self.refresh_interval = CORE_REFRESH_INTERVAL
         self.hysterisis_threshold = HYSTERISIS_THRESHOLD
         self.sigma_level = SIGMA_LEVEL
@@ -396,14 +398,23 @@ class ServicePlannerCore():
             logging.info(f"Using default server {DEFAULT_SERVER_ID}")
             self.best_server = self.servers[DEFAULT_SERVER_ID]
         
-        if previous_server != self.best_server:
+        if self.update_send_time is not None:
+            time_since_update = time.time() - self.update_send_time
+        else:
+            time_since_update = 0
+            
+        if previous_server != self.best_server or time_since_update > self.keep_alive_interval:
                 asyncio.create_task(
                     self.comm.send_recommendation(
                         Update.UNSOLICITED.value, self.best_server.get_address() if self.best_server else None
                     )
                 )
-                logging.info(f"Best server update sent: {self.best_server.get_id()}")
-
+                logging.info(
+                    "Best server update sent: %s, Update interval: %s",
+                    self.best_server.get_id(),
+                    time_since_update
+                    )
+                self.update_send_time = time.time()
 
     async def periodic_update(self):
         logging.info("Starting periodic update")
