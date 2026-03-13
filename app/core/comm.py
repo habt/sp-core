@@ -57,7 +57,7 @@ class ServicePlannerComm():
 
     # Sends network recommendation to SP agent
     async def send_recommendation(self, type, data):
-        logging.info(f"Sending data through websocket: {data}")
+        logging.info(f"Sending ip address {data} through websocket")
         
         if self.client_websocket is None:
             logging.error("Websocket connection not established. Cannot send data.")
