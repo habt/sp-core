@@ -287,6 +287,7 @@ Purpose:
 ```
 sleep_time = max(0, self.update_interval - elapsed)
 await asyncio.sleep(sleep_time)
+```
 
 ---
 
