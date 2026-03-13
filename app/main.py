@@ -82,13 +82,30 @@ def set_led(led: str, color: str):
 @app.post("/control")
 def update_control(data: ControlData):
     global control_state
-    
     control_state = data.dict()
-    print("Received control data:", control_state)
-    sp_core.set_parameters(control_state)
+    logging.info("Received control data:", control_state)
+    try:
+        result = sp_core.set_parameters(control_state)
+        if result:
+            return {"success": True, "message": "parameters updated"}
+        else:
+            return {"success": False, "received": "Failed to update parameters"}
+    
+    except Exception as e:
+        logging.exception("Error setting parameters")
+        return {"success": False, "error": str(e)}
 
-    return {"success": True, "received": control_state}
 
 @app.post("/toggle")
 def toggle_core(toggle: ToggleData):
-    sp_core.set_status(toggle.command)
+    try:
+        result = sp_core.set_status(toggle.command)
+
+        if isinstance(result, bool):
+            if result:
+                return {"success": True, "message": f"Core set to {toggle.command}"}
+            return {"success": False, "message": f"Core rejected command: {toggle.command}"}
+        
+    except Exception as e:
+        logging.exception("Error toggling core")
+        return {"success": False, "error": str(e)}

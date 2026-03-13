@@ -71,6 +71,8 @@ class ServicePlannerCore():
             self.enabled = False
         else:
             logging.error(f"Unknown commad: {command}. Core enabled = {self.enabled}")
+            return False
+        return True
 
     
     def set_refresh_interval(self, interval: float):
@@ -104,14 +106,19 @@ class ServicePlannerCore():
 
 
     def set_parameters(self, control_params):
-        self.set_refresh_interval(
-            control_params['update'])
-        self.set_hysterisis_threshold(
-            control_params['hysteresis'])
-        self.set_sigma_level(
-            control_params['sigma'])
-        self.set_ewma_coefficient(
-            control_params['ewma'])
+        try:
+            self.set_refresh_interval(
+                control_params['update'])
+            self.set_hysterisis_threshold(
+                control_params['hysteresis'])
+            self.set_sigma_level(
+                control_params['sigma'])
+            self.set_ewma_coefficient(
+                control_params['ewma'])
+            return True
+        except Exception as e:
+            logging.error(f"Error in updating parameters. {e}")
+            raise
 
     
     @staticmethod
