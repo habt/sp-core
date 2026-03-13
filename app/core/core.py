@@ -26,9 +26,8 @@ SIGMA_LEVEL = float(os.getenv("SIGMA_LEVEL", DEFAULT_SIGMA_LEVEL))
 EWMA_ALPHA = float(os.getenv("EWMA_COEFFICIENT", DEFAULT_EWMA_ALPHA))
 SWITCHING_THRESOLD = float(os.getenv("SWITCHING_THRESHOLD_MS", DEFAULT_SWITCHING_THRESHOLD_MS))
 
-DEFAULT_SERVER_ID = os.getenv("SIGMA_LEVEL", "jetson_4")
+DEFAULT_SERVER = os.getenv("DEFAULT_SERVER", "jetson_4")
 
-LOG_LEVEL = os.getenv("LOG_LEVEL", "WARNING").upper()
 logging.basicConfig(level=logging.INFO)  #TODO: use the env settings instead of hardcoding the level here
 
 
@@ -45,6 +44,7 @@ class ServicePlannerCore():
         self.best_connection = None
         self.best_server = None
         self.candidate_server = None  # used by the hyterisis counter method of selection
+        self.default_server = DEFAULT_SERVER
         
         self.keep_alive_interval = KEEP_ALIVE_INTERVAL
         self.refresh_interval = CORE_REFRESH_INTERVAL
@@ -166,7 +166,7 @@ class ServicePlannerCore():
         if gpu_predictions is not None:                                                         # update the gpu predictions of each server/gpu if gpu predictions are available
             
             preds = gpu_predictions.get("predictions", [])
-            logging.info("Setting gpu predictions of servers: %s", preds)
+            #logging.info("Setting gpu predictions of servers: %s", preds)
             
             for pred in preds:
                 server = next((self.servers[id] for id in self.servers if  id == pred['node_id']), None)
@@ -178,7 +178,7 @@ class ServicePlannerCore():
                         pred[GPU_PRED_KEY], 
                         pred[GPU_PRED_VAR_KEY]
                         )
-            logging.info("GPU predictions updated: %s", gpu_predictions)
+            #logging.info("GPU predictions updated: %s", gpu_predictions)
         else:                                                                               # set the gpu predictions of each server/gpu to nan if gpu predictions do not exist
             logging.warning("No GPU predictions found. Setting predictions to nan")
             for server in self.servers.values():
@@ -193,7 +193,7 @@ class ServicePlannerCore():
         
         if net_predictions is not None:                                                     #  update the network predictions of each link if network predictions are available
             preds = net_predictions.get("servers", {}).values()
-            logging.info("Setting network predictions: %s", preds)
+            #logging.info("Setting network predictions: %s", preds)
             
             for pred in preds: 
                 link = next((self.links[id] for id in self.links if id == pred['server_id']), None)
@@ -205,7 +205,7 @@ class ServicePlannerCore():
                         pred[NET_PRED_KEY], 
                         pred[NET_PRED_VAR_KEY]
                         )
-            logging.info("Network predictions updated: %s", net_predictions)
+            #logging.info("Network predictions updated: %s", net_predictions)
         else:                                                                                    # set the network predictions of each link to nan if network predictions do not exist
             logging.warning("No network predictions found. Setting predictions to nan")
             for link in self.links.values():
@@ -226,7 +226,7 @@ class ServicePlannerCore():
                 continue
             
             if comp:
-                tot += comp.get_sigma_delay()
+                tot += comp.get_curr_delay()
 
         return {"id": server_id, "delay": tot}
 
@@ -318,7 +318,7 @@ class ServicePlannerCore():
         
         if not valid_conns:
             logging.error("No valid EWMA delays available to select fastest connection")
-            self.best_server = self.servers.get(DEFAULT_SERVER_ID)
+            self.best_server = self.servers.get(self.default_server)
             return
 
         candidate_conn = min(valid_conns, key=lambda x: x['ewma_delay'])
@@ -395,14 +395,14 @@ class ServicePlannerCore():
             
             self.update_best_server()
         else:
-            logging.info(f"Using default server {DEFAULT_SERVER_ID}")
-            self.best_server = self.servers[DEFAULT_SERVER_ID]
+            logging.info(f"Using default server {self.default_server}")
+            self.best_server = self.servers[self.default_server]
         
         if self.update_send_time is not None:
             time_since_update = time.time() - self.update_send_time
         else:
             time_since_update = 0
-            
+
         if previous_server != self.best_server or time_since_update > self.keep_alive_interval:
                 asyncio.create_task(
                     self.comm.send_recommendation(

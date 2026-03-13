@@ -11,20 +11,24 @@ class Network(Component):
         self.subtype = meta['subtype']
         self.id = meta['id']
 
+
     def get_pred_delay(self) -> float:
         if self.pred_delay is None:
             return MAX_NET_DELAY
         return self.pred_delay
 
+
     def get_stdv_delay(self) -> float:
         if self.stdv_delay is None:
             return MAX_NET_DELAY_VARIABILITY
         return self.stdv_delay
-    
-    def get_sigma_delay(self) -> float:
-        if self.sigma_delay is None:
+
+
+    def get_curr_delay(self) -> float:
+        if self.curr_delay is None:
             return MAX_NET_DELAY + DEFAULT_SIGMA_LEVEL * MAX_NET_DELAY_VARIABILITY
-        return self.sigma_delay
+        return self.curr_delay
+ 
     
     def get_ewma_delay(self) -> float:
         if self.ewma_delay is None:

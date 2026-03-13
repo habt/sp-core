@@ -133,7 +133,7 @@ State maintained per component:
 
 * `pred_delay`
 * `stdv_delay`
-* `sigma_delay`
+* `curr_delay`
 * `ewma_delay`
 * `delay_history`
 * `ewma_alpha`
@@ -143,7 +143,7 @@ Methods:
 
 ```python
 set_prediction()
-update_sigma_delay()
+update_curr_delay()
 update_ewma_delay()
 ```
 
@@ -206,7 +206,7 @@ Note: Environment variables are loaded as **strings** and converted to appropria
 A conservative delay estimate based on prediction uncertainty.
 
 ```
-sigma_delay = pred_delay + sigma_level * stdv_delay
+curr_delay = pred_delay + sigma_level * stdv_delay
 ```
 
 ---
@@ -232,7 +232,6 @@ Server selection uses:
 
 * **EWMA-based comparison**
 * **Switching threshold**
-* **Hysteresis counter**
 
 These mechanisms prevent rapid server switching (flapping).
 
@@ -286,7 +285,7 @@ Range: `0 – 6`
 Purpose:
 
 ```
-sigma_delay = pred_delay + sigma_level * stdv_delay
+curr_delay = pred_delay + sigma_level * stdv_delay
 ```
 
 ---

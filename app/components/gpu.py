@@ -15,23 +15,28 @@ class Gpu(Component):
     def get_id(self) -> str:
         return self.id
 
+
     def get_address(self) -> str:
         return self.address
-    
+
+
     def get_pred_delay(self) -> float:
         if self.pred_delay is None:
             return MAX_SERVER_DELAY
         return self.pred_delay
+
 
     def get_stdv_delay(self) -> float:
         if self.stdv_delay is None:
             return MAX_SERVER_DELAY_VARIABILITY
         return self.stdv_delay
     
-    def get_sigma_delay(self) -> float:
-        if self.sigma_delay is None:
+
+    def get_curr_delay(self) -> float:
+        if self.curr_delay is None:
             return MAX_SERVER_DELAY + DEFAULT_SIGMA_LEVEL * MAX_SERVER_DELAY_VARIABILITY
-        return self.sigma_delay
+        return self.curr_delay
+    
     
     def get_ewma_delay(self) -> float:
         if self.ewma_delay is None:
