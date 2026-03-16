@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>LED Dashboard</title>
+  <title>SP Core Dashboard</title>
 
   <style>
    
@@ -36,8 +36,8 @@
 
      /* status box: "enabled" / "disabled" */
     .status-box {
-      width: 18px;
-      height: 18px;
+      width: 14px;
+      height: 14px;
       border-radius: 4px;
       border: 1px solid #444;
       /* flow inline next to the title */
@@ -107,8 +107,8 @@
 
 
     .led {
-      width: 80px;
-      height: 80px;
+      width: 90px;
+      height: 90px;
       border-radius: 50%;
       background: gray;
       transition: all 0.3s ease;
@@ -245,7 +245,7 @@ async function fetchStatus() {
 
 // store the interval id (not the milliseconds value)
 let refreshIntervalId = null;
-const DEFAULT_INTERVAL_MS = 10000;
+const DEFAULT_INTERVAL_MS = 3000;
 
 // start the periodic fetch immediately
 refreshIntervalId = setInterval(fetchStatus, DEFAULT_INTERVAL_MS);
