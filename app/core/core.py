@@ -69,6 +69,8 @@ class ServicePlannerCore():
             self.enabled = True
         elif command == "disable":
             self.enabled = False
+            self.best_connection = None
+            self.best_server = self.servers[self.default_server]
         else:
             logging.error(f"Unknown commad: {command}. Core enabled = {self.enabled}")
             return False
@@ -365,8 +367,10 @@ class ServicePlannerCore():
                                  "Continuing with current server."
                                  )
             else:
-                logging.info("Candidate connection same as current connection."
-                             "Continuing with current server."
+                logging.info("Candidate connection %s same as current connection %s."
+                             "Continuing with current server.",
+                             candidate_conn.get('id'),
+                             current_best_conn.get('id')
                              )  
         else:
             self.best_connection = candidate_conn
@@ -405,8 +409,8 @@ class ServicePlannerCore():
             
             self.update_best_server()
         else:
-            logging.info(f"Using default server {self.default_server}")
-            self.best_server = self.servers[self.default_server]
+            logging.info(f"SP disabled. Using default server {self.best_server.get_id()}")
+            
         
         if self.update_send_time is not None:
             time_since_update = time.time() - self.update_send_time
