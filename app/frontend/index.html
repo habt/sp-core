@@ -27,8 +27,32 @@
       color: white;
       display: flex;
       align-items: center;
+      /* center the title+status group, allow a small gap between them */
       justify-content: center;
+      gap: 8px;
       font-size: 32px;
+      position: relative; /* allow absolute-positioned status box */
+    }
+
+     /* status box: "enabled" / "disabled" */
+    .status-box {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      border: 1px solid #444;
+      /* flow inline next to the title */
+      position: static;
+      margin-left: 8px;
+      background: #333;
+      box-shadow: none;
+    }
+    .status-box.enabled {
+      background: #2ecc71;
+      box-shadow: 0 0 8px #2ecc71;
+    }
+    .status-box.disabled {
+      background: #e74c3c;
+      box-shadow: 0 0 8px #e74c3c;
     }
 
     .content {
@@ -138,7 +162,8 @@
 <body>
   <div class="container">
     <div class="header">
-        Service Planner
+      <div class="header-title">Service Planner</div>
+      <div id="coreStatus" class="status-box" title="Core status unknown"></div>
     </div>
 
     <div class="content">
@@ -290,8 +315,33 @@ function syncLedPanelWidth() {
   window.addEventListener('resize', applyWidth);
 }
 
+
+// Poll backend for core "enabled" state and update header status box.
+async function fetchCoreState() {
+  const box = document.getElementById("coreStatus");
+  console.log(box);
+  if (!box) return;
+  try {
+    const res = await fetch("/core/state");
+    if (!res.ok) throw new Error("no-response");
+    const data = await res.json();
+    console.log(data)
+    // Accept either {enabled: true/false} or {state: "enabled"/"disabled"}
+    const enabled = (data.enabled === true) || (typeof data.state === "string" && data.state.toLowerCase() === "enabled");
+    box.className = "status-box " + (enabled ? "enabled" : "disabled");
+    box.title = enabled ? "Core enabled" : "Core disabled";
+  } catch (e) {
+    box.className = "status-box disabled";
+    box.title = "Core unreachable / disabled";
+  }
+}
+
 // call when DOM/script is ready
 syncLedPanelWidth();
+
+const CORE_POLL_MS = 2000;
+fetchCoreState();
+setInterval(fetchCoreState, CORE_POLL_MS);
 
 
 setInterval(fetchStatus, refreshInterval);

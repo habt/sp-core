@@ -66,7 +66,7 @@ async def recommendation_websocket_endpoint(websocket: WebSocket):
 
 
 @app.get("/led/status")
-def get_status():
+async def get_status():
     led_states = update_led_states(
         sp_core.best_server.get_id() if sp_core.best_server else "jetson_1", 
         is_best=True)
@@ -77,16 +77,8 @@ def get_status():
         return led_colors
 
 
-@app.get("/set/{led}/{color}")
-def set_led(led: str, color: str):
-    if led in led_states and color in ["red", "green", "yellow", "blue", "off"]:
-        led_states[led] = color
-        return {"success": True, "led": led, "color": color}
-    return {"error": "Invalid LED or color"}
-
-
 @app.post("/control")
-def update_control(data: ControlData):
+async def update_control(data: ControlData):
     global control_state
     control_state = data.dict()
     logging.info("Received control data:", control_state)
@@ -103,7 +95,7 @@ def update_control(data: ControlData):
 
 
 @app.post("/toggle")
-def toggle_core(toggle: ToggleData):
+async def toggle_core(toggle: ToggleData):
     try:
         result = sp_core.set_status(toggle.command)
 
@@ -112,6 +104,18 @@ def toggle_core(toggle: ToggleData):
                 return {"success": True, "message": f"Core set to {toggle.command}"}
             return {"success": False, "message": f"Core rejected command: {toggle.command}"}
         
+    except Exception as e:
+        logging.exception("Error toggling core")
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/core/state")
+async def get_core_state():
+    try:
+        if sp_core.enabled == True:
+            return  {"success": True, "state": "enabled" }
+        else:
+            return {"success": True, "state": "disabled"}
     except Exception as e:
         logging.exception("Error toggling core")
         return {"success": False, "error": str(e)}

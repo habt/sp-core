@@ -423,6 +423,7 @@ class ServicePlannerCore():
                     )
                 self.update_send_time = time.time()
 
+
     async def periodic_update(self):
         logging.info("Starting periodic update")
         try:
