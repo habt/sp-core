@@ -1,7 +1,7 @@
 from enum import Enum
 from pydantic import BaseModel
 from typing import Optional
-from app.library.settings import DEFAULT_EWMA_ALPHA, DEFAULT_HISTORY_LENGTH, DEFAULT_SIGMA_LEVEL
+from app.library.settings import DEFAULT_EWMA_ALPHA, DEFAULT_SWITCHING_THRESHOLD_MS, DEFAULT_SIGMA_LEVEL
 
 # --------- Data for frontend ---------#
 class ControlData(BaseModel):
@@ -9,6 +9,7 @@ class ControlData(BaseModel):
     hysteresis: Optional[float] =  10
     sigma: Optional[float]    =  DEFAULT_SIGMA_LEVEL
     ewma: Optional[float]  = DEFAULT_EWMA_ALPHA
+    switch : Optional[float] = DEFAULT_SWITCHING_THRESHOLD_MS
 
 class ToggleData(BaseModel):
     command: str = 'enable'

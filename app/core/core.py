@@ -75,9 +75,9 @@ class ServicePlannerCore():
         return True
 
     
-    def set_refresh_interval(self, interval: float):
+    def set_update_interval(self, interval: float):
         self.update_interval = interval
-        logging.info(f"Refresh interval set to {self.update_interval} seconds")
+        logging.info(f"Core update interval set to {self.update_interval} seconds")
     
 
     def set_hysterisis_threshold(self, window: float):
@@ -90,6 +90,12 @@ class ServicePlannerCore():
         if coef is not None:
             self.ewma_alpha = coef
             logging.info(f"EWMA alpha set to {self.ewma_alpha}")
+    
+
+    def set_switching_threshold(self, threshold: float):
+        if threshold is not None:
+            self.switching_threshold = threshold
+            logging.info(f"Switching threshold set to {self.switching_threshold}")
     
 
     def set_sigma_level(self, level: float):
@@ -107,14 +113,11 @@ class ServicePlannerCore():
 
     def set_parameters(self, control_params):
         try:
-            self.set_refresh_interval(
-                control_params['update'])
-            self.set_hysterisis_threshold(
-                control_params['hysteresis'])
-            self.set_sigma_level(
-                control_params['sigma'])
-            self.set_ewma_coefficient(
-                control_params['ewma'])
+            self.set_update_interval(control_params['update'])
+            self.set_hysterisis_threshold(control_params['hysteresis'])
+            self.set_sigma_level(control_params['sigma'])
+            self.set_ewma_coefficient(control_params['ewma'])
+            self.set_switching_threshold(control_params['switch'])
             return True
         except Exception as e:
             logging.error(f"Error in updating parameters. {e}")
